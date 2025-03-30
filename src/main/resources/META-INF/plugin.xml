@@ -10,9 +10,32 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.github.jinho622.capstone2intellijplugindevlog.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
+        <projectService serviceImplementation="actions.MyBookmarkStorage"/>
+        <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
     </extensions>
 
     <applicationListeners>
         <listener class="com.github.jinho622.capstone2intellijplugindevlog.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
     </applicationListeners>
+
+    <actions>
+        <!--        <action id="Custom.MenuAction" class="com.example.demoplugin.MyBookmarkAction" text="메뉴 입력하기">-->
+        <!--            <add-to-group group-id="GenerateGroup" anchor="first"/>-->
+        <!--        </action>-->
+
+        <action id="BookmarkSelectedCode"
+                class="actions.MyBookmarkAction"
+                text="드래그한 코드 북마크 저장"
+                description="드래그한 코드를 북마크로 저장합니다.">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+
+        <action id="ShowBookmarksAction"
+                class="actions.ShowBookmarksAction"
+                text="북마크 보기"
+                description="저장된 북마크를 보여줍니다">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+        </action>
+
+    </actions>
 </idea-plugin>
