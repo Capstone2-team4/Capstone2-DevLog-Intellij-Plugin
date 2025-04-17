@@ -48,6 +48,8 @@ dependencies {
         zipSigner()
         testFramework(TestFrameworkType.Platform)
     }
+
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
 }
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
@@ -122,6 +124,13 @@ kover {
                 onCheck = true
             }
         }
+    }
+}
+
+sourceSets {
+    main {
+        java.srcDirs("src/main/java")
+        kotlin.srcDirs("src/main/kotlin")
     }
 }
 

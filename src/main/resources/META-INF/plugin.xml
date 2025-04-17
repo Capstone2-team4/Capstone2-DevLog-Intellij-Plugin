@@ -12,10 +12,12 @@
         <toolWindow factoryClass="com.github.jinho622.capstone2intellijplugindevlog.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
         <projectService serviceImplementation="actions.MyBookmarkStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
+<!--        <startupActivity implementation="exception.RunListenerStartupActivity"/>-->
     </extensions>
 
     <applicationListeners>
         <listener class="com.github.jinho622.capstone2intellijplugindevlog.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
+<!--        <listener class="exception.RunListener" topic="com.intellij.execution.ExecutionListener"/>-->
     </applicationListeners>
 
     <actions>
@@ -25,17 +27,31 @@
 
         <action id="BookmarkSelectedCode"
                 class="actions.MyBookmarkAction"
-                text="드래그한 코드 북마크 저장"
+                text="드래그한 코드 코드블록 저장"
                 description="드래그한 코드를 북마크로 저장합니다.">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
 
         <action id="ShowBookmarksAction"
                 class="actions.ShowBookmarksAction"
-                text="북마크 보기"
+                text="코드블록 보기"
                 description="저장된 북마크를 보여줍니다">
             <add-to-group group-id="EditorPopupMenu" anchor="last"/>
         </action>
 
+        <group id="DevLog.MenuGroup"
+               text="MenuGrop"
+               description="DevLog top menu"
+               popup="true">
+            <add-to-group group-id="MainMenu" anchor="last"/>
+            <action id="DevLog.LoginAction"
+                    class="actions.LoginAction"
+                    text="Login"
+                    description="Log in to your account"/>
+<!--            <action id="MyPlugin.LogoutAction"-->
+<!--                    class="actions.LogoutAction"-->
+<!--                    text="Logout"-->
+<!--                    description="Log out of your account"/>-->
+        </group>
     </actions>
 </idea-plugin>
