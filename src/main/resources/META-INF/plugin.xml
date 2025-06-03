@@ -11,13 +11,14 @@
     <extensions defaultExtensionNs="com.intellij">
         <toolWindow factoryClass="com.github.jinho622.capstone2intellijplugindevlog.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
         <projectService serviceImplementation="actions.MyBookmarkStorage"/>
+        <projectService serviceImplementation="ErrorLog.ErrorLogStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
-<!--        <startupActivity implementation="exception.RunListenerStartupActivity"/>-->
+        <postStartupActivity
+                implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
     </extensions>
 
     <applicationListeners>
         <listener class="com.github.jinho622.capstone2intellijplugindevlog.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>
-<!--        <listener class="exception.RunListener" topic="com.intellij.execution.ExecutionListener"/>-->
     </applicationListeners>
 
     <actions>
