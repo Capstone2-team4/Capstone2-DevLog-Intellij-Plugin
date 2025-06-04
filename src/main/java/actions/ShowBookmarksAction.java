@@ -26,7 +26,7 @@ public class ShowBookmarksAction extends AnAction {
         StringBuilder sb = new StringBuilder();
         for (MyBookMark bm : bookmarks) {
             sb.append("📄 파일: ").append(bm.filePath).append("\n")
-                    .append("📍 줄 번호: ").append(bm.line + 1).append("\n")
+//                    .append("📍 줄 번호: ").append(bm.line + 1).append("\n")
                     .append("🎉 카테고리: ").append(bm.category).append("\n")
                     .append("🌹 제목: ").append(bm.title).append("\n")
                     .append("🔖 내용: ").append(bm.content).append("\n")

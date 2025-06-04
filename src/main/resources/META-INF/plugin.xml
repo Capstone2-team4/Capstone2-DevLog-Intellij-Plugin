@@ -5,6 +5,8 @@
     <vendor>jinho622</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends>com.intellij.modules.lang</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
@@ -13,9 +15,21 @@
         <projectService serviceImplementation="actions.MyBookmarkStorage"/>
         <projectService serviceImplementation="ErrorLog.ErrorLogStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
+<<<<<<< Updated upstream
         <postStartupActivity
                 implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
+=======
+        <editorFactoryListener implementation="listener.EditorLifecycleListener"/>
+
+        <!--                <startupActivity implementation="exception.RunListenerStartupActivity"/>-->
+>>>>>>> Stashed changes
     </extensions>
+
+    <projectListeners>
+        <listener
+                class="listener.FileOpenedHighlighter"
+                topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
 
     <applicationListeners>
         <listener class="com.github.jinho622.capstone2intellijplugindevlog.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>

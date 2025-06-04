@@ -43,9 +43,9 @@ public class MyBookmarkStorage implements PersistentStateComponent<MyBookmarkSto
         return bookmarks;
     }
 
-    public boolean isBookmarked(String filePath, int line) {
-        return bookmarks.stream()
-                .anyMatch(b -> b.filePath.equals(filePath) && b.line == line);
-    }
+//    public boolean isBookmarked(String filePath, int line) {
+//        return bookmarks.stream()
+//                .anyMatch(b -> b.filePath.equals(filePath) && b.line == line);
+//    }
 
 }
