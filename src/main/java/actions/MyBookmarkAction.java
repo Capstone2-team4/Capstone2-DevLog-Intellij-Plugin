@@ -132,6 +132,7 @@ public class MyBookmarkAction extends AnAction {
                 myBookMark.content  = content;
                 myBookMark.category = category;
                 myBookMark.code     = selectedText;
+                myBookMark.status = "managed";
 
                 boolean created = SendSnippetCreateService.sendCreate(project, myBookMark);
                 if (!created) {
@@ -141,17 +142,10 @@ public class MyBookmarkAction extends AnAction {
                     return;
                 }
 
-//                int lineNumber = editor.getCaretModel().getLogicalPosition().line;
-//                MyBookMark myBookMark = new MyBookMark();
-//                myBookMark.filePath = file.getPath();
-//                myBookMark.line = lineNumber;
-//                myBookMark.title = title;
-//                myBookMark.content = content;
-//                myBookMark.category = category;
-//                myBookMark.code = selectedText;
-//
-//                MyBookmarkStorage storage = MyBookmarkStorage.getInstance(project);
-//                storage.addBookmark(myBookMark);
+                // 9. "로컬 Map"에도 함께 저장
+
+                MyBookmarkStorage storage = MyBookmarkStorage.getInstance(project);
+                storage.addBookmark(myBookMark);
 
                 Messages.showMessageDialog(
                         "북마크 추가 완료!\n\n제목: " + title + "\n이름: " + content + "\n카테고리: " + category + "\n코드:\n" + selectedText,
@@ -165,9 +159,6 @@ public class MyBookmarkAction extends AnAction {
     }
 
     private boolean postNewCategoryToServer(String newCategory) {
-<<<<<<< Updated upstream
-        return true;
-=======
         String token = UserStorage.getAccessToken();
         try {
             URL url = new URL("http://localhost:8080/categories");
@@ -216,7 +207,7 @@ public class MyBookmarkAction extends AnAction {
         }
 
         return false;
->>>>>>> Stashed changes
+
     }
 
     private List<String> fetchCategoriesFromServer() {

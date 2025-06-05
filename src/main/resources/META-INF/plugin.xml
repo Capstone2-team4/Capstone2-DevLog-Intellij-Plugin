@@ -15,14 +15,12 @@
         <projectService serviceImplementation="actions.MyBookmarkStorage"/>
         <projectService serviceImplementation="ErrorLog.ErrorLogStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
-<<<<<<< Updated upstream
         <postStartupActivity
                 implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
-=======
         <editorFactoryListener implementation="listener.EditorLifecycleListener"/>
 
         <!--                <startupActivity implementation="exception.RunListenerStartupActivity"/>-->
->>>>>>> Stashed changes
+
     </extensions>
 
     <projectListeners>

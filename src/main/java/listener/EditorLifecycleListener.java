@@ -159,7 +159,7 @@ public final class EditorLifecycleListener implements EditorFactoryListener {
             // TextAttributesKey 또는 직접 TextAttributes 생성
             TextAttributes attributes = new TextAttributes();
             // 배경색을 조금 연한 노란색으로 설정 (필요에 따라 색상 조정)
-            attributes.setBackgroundColor(new Color(0xFFFBCC));
+            attributes.setBackgroundColor(new Color(0xE8DF7D));
 
             // RangeHighlighter 타입: 영역 전체 배경 채우기 위한 LAYER
             int layer = HighlighterLayer.SELECTION - 1; // Selection 바로 아래 레이어
@@ -181,17 +181,36 @@ public final class EditorLifecycleListener implements EditorFactoryListener {
             String snippetId = entry.getKey();
             RangeMarker marker = entry.getValue();
             if (!marker.isValid()) {
+                // → marker가 유효하지 않으면, 서버에 status="deleted"로 갱신
+                boolean statusUpdated = SendSnippetUpdateService.sendUpdateStatus(
+                        project, snippetId
+                );
+                if (!statusUpdated) {
+                    System.err.println("[onDocumentChanged] Failed to mark snippet deleted: " + snippetId);
+                }
+
                 markerService.removeMarker(snippetId);
                 continue;
             }
 
             int newStartOffset = marker.getStartOffset();
             int newEndOffset   = marker.getEndOffset();
-            // RangeMarker 내부적으로 오프셋이 자동 보정되므로 그대로 사용
             String newSnippetText = document.getText().substring(newStartOffset, newEndOffset);
 
             System.out.println("newStartOffset = " + newStartOffset);
             System.out.println("newEndOffset = " + newEndOffset);
+
+            // 2) “startOffset == endOffset”이면서 텍스트가 빈 문자열인 경우도 삭제로 간주
+            if (newStartOffset == newEndOffset && newSnippetText.isEmpty()) {
+                boolean statusUpdated = SendSnippetUpdateService.sendUpdateStatus(
+                        project, snippetId
+                );
+                if (!statusUpdated) {
+                    System.err.println("[onDocumentChanged] Failed to mark snippet deleted: " + snippetId);
+                }
+                markerService.removeMarker(snippetId);
+                continue;
+            }
 
             // 서버로 업데이트 요청
             boolean success = SendSnippetUpdateService.sendUpdate(

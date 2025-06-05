@@ -48,6 +48,8 @@ public class SendSnippetCreateService {
             json.addProperty("content", bookmark.content);
             json.addProperty("category", bookmark.category);
             json.addProperty("code", bookmark.code);
+            json.addProperty("status", bookmark.status);
+
 
             String payload = gson.toJson(json);
             URL url = new URL(CREATE_URL);

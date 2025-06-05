@@ -9,4 +9,5 @@ public class MyBookMark {
     public String content;
     public String code;
     public String category;
+    public String status;
 }

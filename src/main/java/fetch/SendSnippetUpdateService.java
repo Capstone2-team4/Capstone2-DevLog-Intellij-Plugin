@@ -62,4 +62,39 @@ public class SendSnippetUpdateService {
             return false;
         }
     }
+
+    /**
+     * 서버에 "이 스니펫(id)의 status만 변경해 달라"고 요청합니다.
+     *
+     * @param project    현재 Project (토큰 조회용)
+     * @param snippetId  수정할 스니펫 ID(UUID)
+     * @return 성공 여부
+     */
+    public static boolean sendUpdateStatus(Project project,
+                                           String snippetId
+                                           ) {
+        try {
+            // PUT /codes/block/{id}/status
+            URL url = new URL(BASE_URL + "/block/" + snippetId + "/status");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            String token = UserStorage.getAccessToken();
+
+            conn.setRequestMethod("PUT");
+            conn.setRequestProperty("Content-Type", "application/json; utf-8");
+            conn.setRequestProperty("Accept", "application/json");
+            if (token != null && !token.isBlank()) {
+                conn.setRequestProperty("Authorization", "Bearer " + token);
+            }
+            conn.setDoOutput(true);
+
+            int responseCode = conn.getResponseCode();
+            conn.disconnect();
+            return (responseCode == HttpURLConnection.HTTP_OK
+                    || responseCode == HttpURLConnection.HTTP_NO_CONTENT);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }
