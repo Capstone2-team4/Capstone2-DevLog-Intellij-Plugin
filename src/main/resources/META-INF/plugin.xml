@@ -5,6 +5,8 @@
     <vendor>jinho622</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+    <depends>com.intellij.modules.lang</depends>
 
     <resource-bundle>messages.MyBundle</resource-bundle>
 
@@ -17,7 +19,17 @@
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
         <postStartupActivity
                 implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
+        <editorFactoryListener implementation="listener.EditorLifecycleListener"/>
+
+        <!--                <startupActivity implementation="exception.RunListenerStartupActivity"/>-->
+
     </extensions>
+
+    <projectListeners>
+        <listener
+                class="listener.FileOpenedHighlighter"
+                topic="com.intellij.openapi.fileEditor.FileEditorManagerListener"/>
+    </projectListeners>
 
     <applicationListeners>
         <listener class="com.github.jinho622.capstone2intellijplugindevlog.listeners.MyApplicationActivationListener" topic="com.intellij.openapi.application.ApplicationActivationListener"/>

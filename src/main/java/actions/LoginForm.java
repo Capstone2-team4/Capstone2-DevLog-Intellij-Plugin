@@ -2,7 +2,9 @@ package actions;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.intellij.openapi.application.ApplicationManager;
 import data.UserStorage;
+import listener.LoginListener;
 
 import javax.swing.*;
 import java.awt.*;
@@ -87,6 +89,13 @@ public class LoginForm extends JFrame {
 
                     // 응답코드 확인, 응답 성공이면 다음 스텝 실행
                     System.out.println("📦 응답 코드: " + response.statusCode());
+
+                    //    → "LoginListener.TOPIC" 을 구독한 리스너(e.g. EditorLifecycleListener)들이 이 콜백을 받음
+                    ApplicationManager.getApplication()
+                            .getMessageBus()
+                            .syncPublisher(LoginListener.TOPIC)
+                            .loginSucceeded();
+
                     if(response.statusCode() == 200) {
                         // ✅ 1. 로그인 성공 알림창
                         JOptionPane.showMessageDialog(LoginForm.this,
