@@ -12,6 +12,8 @@
         <toolWindow factoryClass="com.github.jinho622.capstone2intellijplugindevlog.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
         <projectService serviceImplementation="actions.MyBookmarkStorage"/>
         <projectService serviceImplementation="ErrorLog.ErrorLogStorage"/>
+        <projectService serviceImplementation="ErrorLog.AllFilesStorage"/>
+        <projectService serviceImplementation="ErrorLog.SolvedCodeFilesStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
         <postStartupActivity
                 implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
