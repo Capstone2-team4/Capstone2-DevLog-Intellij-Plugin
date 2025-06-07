@@ -1,5 +1,8 @@
 package ErrorLog;
 
+import actions.LoginForm;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.DeltaType;
@@ -23,18 +26,28 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.io.HttpRequests;
 import data.AllFiles;
 import data.ErrorLog;
 import data.SolvedCodeFiles;
+import data.UserStorage;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import javax.swing.*;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class MyProcessLogger {
 
@@ -75,6 +88,9 @@ public class MyProcessLogger {
 
             @Override
             public void processTerminated(ProcessEvent event) {
+                // 에러 정보, 에러 코드, 에러 해결 코드 저장 api 연결 테스트
+//                saveErrorInfo();
+
                 // 에러발생시 알림, 알림에서 저장 및 해결 또는 무시 선택 가능 / 저장 및 해결 선택 시 에러 관련 정보 저장
                 checkNormalTermination();
                 if (!errorLogList.isEmpty()) { // 에러 없이 종료시켰을 때 알람 안뜨게 해결해야됨.
@@ -89,6 +105,73 @@ public class MyProcessLogger {
                 }
             }
         });
+    }
+
+    private void saveErrorInfo() {
+        System.out.println("*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()");
+        ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
+        SolvedCodeFilesStorage solvedCodeFilesStorage = SolvedCodeFilesStorage.getInstance(project);
+
+        if (errorLogStorage == null || solvedCodeFilesStorage == null) {
+            System.out.println("❗ 저장소를 가져올 수 없습니다.");
+            return;
+        }
+
+        List<ErrorLog> errorLogs = errorLogStorage.getErrorLogs();
+        List<SolvedCodeFiles> solvedFilesList = solvedCodeFilesStorage.getSolvedCodeFilesList();
+
+        System.out.println(errorLogs.get(0).commit);
+
+        for (ErrorLog errorLog : errorLogs) {
+            System.out.println("-----------------------------------------------");
+            JSONObject requestBody = new JSONObject();
+            requestBody.put("commitId", errorLog.commit);
+            requestBody.put("title", errorLog.error);
+            requestBody.put("content", errorLog.errorMessage);
+
+            // 🔧 errorCode 배열 구성
+            JSONArray errorCodeArray = new JSONArray();
+            int len = Math.min(errorLog.errorFilePathList.size(),
+                    Math.min(errorLog.errorLocationInFileList.size(), errorLog.errorFileList.size()));
+
+            IntStream.range(0, len).forEach(i -> {
+                JSONObject codeObj = new JSONObject();
+                codeObj.put("filePath", errorLog.errorFilePathList.get(i));
+                codeObj.put("errorLocation", Integer.parseInt(errorLog.errorLocationInFileList.get(i)));
+                codeObj.put("code", errorLog.errorFileList.get(i));
+                errorCodeArray.put(codeObj);
+            });
+            requestBody.put("errorCode", errorCodeArray);
+
+            // 🔧 errorSolvedCode 배열 구성
+            JSONArray solvedCodeArray = new JSONArray();
+            for (SolvedCodeFiles solved : solvedFilesList) {
+                int solvedLen = Math.min(solved.filePath.size(), solved.fileContent.size());
+                IntStream.range(0, solvedLen).forEach(i -> {
+                    JSONObject solvedObj = new JSONObject();
+                    solvedObj.put("filePath", solved.filePath.get(i));
+                    solvedObj.put("code", solved.fileContent.get(i));
+                    solvedCodeArray.put(solvedObj);
+                });
+            }
+            requestBody.put("errorSolvedCode", solvedCodeArray);
+
+            // ✅ HTTP POST 요청 전송
+            try {
+                HttpRequests.post("http://localhost:8080/errors/save/errorInfo", "application/json")
+                        .tuner(connection -> {
+                            connection.setRequestProperty("Content-Type", "application/json");
+                            connection.setRequestProperty("Authorization", "Bearer " + UserStorage.getAccessToken()); // ✅ 토큰 설정
+                        })                        .connect(request -> {
+                            request.write(requestBody.toString());
+                            String response = request.readString();
+                            System.out.println("✅ 서버 응답: " + response);
+                            return null;
+                        });
+            } catch (Exception e) {
+                System.err.println("❌ 전송 실패: " + e.getMessage());
+            }
+        }
     }
 
     private void checkNormalTermination() {
