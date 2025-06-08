@@ -47,8 +47,7 @@ public class MyCommitHandler extends CheckinHandler {
         storage.clearAll(); // 커밋 성공시, 스토리지 비우기
     }
 
-    private void saveErrorInfo(String commitId) { // commit 이후에 에러, 에러코드 에러 해결코드 저장
-        System.out.println("*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()");
+    private void saveErrorInfo(String commitId) {
         ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
         SolvedCodeFilesStorage solvedCodeFilesStorage = SolvedCodeFilesStorage.getInstance(project);
 
@@ -60,64 +59,77 @@ public class MyCommitHandler extends CheckinHandler {
         List<ErrorLog> errorLogs = errorLogStorage.getErrorLogs();
         List<SolvedCodeFiles> solvedFilesList = solvedCodeFilesStorage.getSolvedCodeFilesList();
 
-        for (ErrorLog errorLog : errorLogs) {
-            System.out.println("-----------------------------------------------");
-            JSONObject requestBody = new JSONObject();
-            requestBody.put("commitId", commitId);
-            requestBody.put("title", errorLog.error);
-            requestBody.put("content", errorLog.errorMessage);
+        int listSize = Math.min(errorLogs.size(), solvedFilesList.size());
 
-            // 🔧 errorCode 배열 구성
+        JSONArray errorListArray = new JSONArray();
+
+        for (int i = 0; i < listSize; i++) {
+            ErrorLog errorLog = errorLogs.get(i);
+            SolvedCodeFiles solvedFiles = solvedFilesList.get(i);
+
+            JSONObject errorItem = new JSONObject();
+            errorItem.put("commitId", commitId);
+            errorItem.put("title", errorLog.error);
+            errorItem.put("content", errorLog.errorMessage);
+
+            // errorCode 구성
             JSONArray errorCodeArray = new JSONArray();
-            int len = Math.min(errorLog.errorFilePathList.size(),
+            int errorCodeSize = Math.min(errorLog.errorFilePathList.size(),
                     Math.min(errorLog.errorLocationInFileList.size(), errorLog.errorFileList.size()));
 
-            IntStream.range(0, len).forEach(i -> {
+            IntStream.range(0, errorCodeSize).forEach(j -> {
                 JSONObject codeObj = new JSONObject();
-                codeObj.put("filePath", errorLog.errorFilePathList.get(i));
-                codeObj.put("errorLocation", Integer.parseInt(errorLog.errorLocationInFileList.get(i)));
-                codeObj.put("code", errorLog.errorFileList.get(i));
+                codeObj.put("filePath", errorLog.errorFilePathList.get(j));
+                codeObj.put("errorLocation", Integer.parseInt(errorLog.errorLocationInFileList.get(j)));
+                codeObj.put("code", errorLog.errorFileList.get(j));
                 errorCodeArray.put(codeObj);
             });
-            requestBody.put("errorCode", errorCodeArray);
+            errorItem.put("errorCode", errorCodeArray);
 
-            // 🔧 errorSolvedCode 배열 구성
+            // errorSolvedCode 구성
             JSONArray solvedCodeArray = new JSONArray();
-            for (SolvedCodeFiles solved : solvedFilesList) {
-                int solvedLen = Math.min(solved.filePath.size(), solved.fileContent.size());
-                IntStream.range(0, solvedLen).forEach(i -> {
-                    JSONObject solvedObj = new JSONObject();
-                    solvedObj.put("filePath", solved.filePath.get(i));
-                    solvedObj.put("code", solved.fileContent.get(i));
-                    solvedCodeArray.put(solvedObj);
-                });
-            }
-            requestBody.put("errorSolvedCode", solvedCodeArray);
+            int solvedSize = Math.min(solvedFiles.filePath.size(), solvedFiles.fileContent.size());
 
-            // ✅ HTTP POST 요청 전송
-            try {
-                HttpRequests.post("http://localhost:8080/errors/save/errorInfo", "application/json")
-                        .tuner(connection -> {
-                            connection.setRequestProperty("Content-Type", "application/json");
-                            connection.setRequestProperty("Authorization", "Bearer " + UserStorage.getAccessToken()); // ✅ 토큰 설정
-                        })                        .connect(request -> {
-                            request.write(requestBody.toString());
-                            String response = request.readString();
-                            System.out.println("✅ 서버 응답: " + response);
-                            return null;
-                        });
-            } catch (Exception e) {
-                System.err.println("❌ 전송 실패: " + e.getMessage());
-            }
-            // 커밋 성공시, 에러 관련 파일(ErrorLogStorage, AllFilesStorage, SolvedCodeFilesStorage) 비우기
-            errorLogStorage.deleteErrorLogStorageFile(project);
-            AllFilesStorage allFilesStorage = AllFilesStorage.getInstance(project);
-            allFilesStorage.deleteAllFilesStorageFile(project);
-            solvedCodeFilesStorage.deleteSolvedCodeFilesStorageFile(project);
-            errorLogStorage.clearAll();
-            allFilesStorage.clearAll();
-            solvedCodeFilesStorage.clearAll();
+            IntStream.range(0, solvedSize).forEach(j -> {
+                JSONObject solvedObj = new JSONObject();
+                solvedObj.put("filePath", solvedFiles.filePath.get(j));
+                solvedObj.put("code", solvedFiles.fileContent.get(j));
+                solvedCodeArray.put(solvedObj);
+            });
+            errorItem.put("errorSolvedCode", solvedCodeArray);
+
+            // errorList에 추가
+            errorListArray.put(errorItem);
         }
+
+        // 최종 request body 구성
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("errorList", errorListArray);
+
+        try {
+            HttpRequests.post("http://localhost:8080/errors/save/errorInfo", "application/json")
+                    .tuner(connection -> {
+                        connection.setRequestProperty("Content-Type", "application/json");
+                        connection.setRequestProperty("Authorization", "Bearer " + UserStorage.getAccessToken());
+                    })
+                    .connect(request -> {
+                        request.write(requestBody.toString());
+                        String response = request.readString();
+                        System.out.println("✅ 서버 응답: " + response);
+                        return null;
+                    });
+        } catch (Exception e) {
+            System.err.println("❌ 전송 실패: " + e.getMessage());
+        }
+
+        // 정리
+        errorLogStorage.deleteErrorLogStorageFile(project);
+        AllFilesStorage allFilesStorage = AllFilesStorage.getInstance(project);
+        allFilesStorage.deleteAllFilesStorageFile(project);
+        solvedCodeFilesStorage.deleteSolvedCodeFilesStorageFile(project);
+        errorLogStorage.clearAll();
+        allFilesStorage.clearAll();
+        solvedCodeFilesStorage.clearAll();
     }
 
     private void sendCommitEvent(String commitId) {
