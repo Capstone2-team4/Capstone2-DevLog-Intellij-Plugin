@@ -11,6 +11,7 @@ import data.SolvedCodeFiles;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,5 +43,19 @@ public class SolvedCodeFilesStorage implements PersistentStateComponent<SolvedCo
 
     public List<SolvedCodeFiles> getSolvedCodeFilesList() {
         return solvedCodeFilesList;
+    }
+
+    public void deleteSolvedCodeFilesStorageFile(Project project) {
+        String path = project.getBasePath() + "/.idea/SolvedCodeFilesStorage.xml";
+        File file = new File(path);
+        if (file.exists()) {
+            if (file.delete()) {
+                System.out.println("✅ SolvedCodeFilesStorage.xml 삭제 완료");
+            }
+        }
+    }
+
+    public void clearAll() {
+        solvedCodeFilesList.clear();
     }
 }

@@ -1,5 +1,8 @@
 package ErrorLog;
 
+import actions.LoginForm;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.DeltaType;
@@ -23,18 +26,28 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
+import com.intellij.util.io.HttpRequests;
 import data.AllFiles;
 import data.ErrorLog;
 import data.SolvedCodeFiles;
+import data.UserStorage;
 import org.jetbrains.annotations.NotNull;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
+import javax.swing.*;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.IntStream;
 
 public class MyProcessLogger {
 
@@ -70,7 +83,7 @@ public class MyProcessLogger {
                 }
 
                 // 필요시 실시간 처리도 가능
-                System.out.print("[LOG] " + text); // 콘솔 출력
+                System.out.print("[LOG] |" + outputType + "| " + text); // 콘솔 출력
             }
 
             @Override
@@ -84,7 +97,8 @@ public class MyProcessLogger {
                     }
                 }
                 System.out.println("-----------------isErrorExist: " + isErrorExist);
-                if (isErrorExist) { // 에러가 해결되고 종료되었을 때
+                ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
+                if (!errorLogStorage.getErrorLogs().isEmpty()) { // 에러가 해결되고 종료되었을 때 = ErrorLogStorage.xml파일이 존재
                     showResolvedCheckNotification(project);
                 }
             }
@@ -92,13 +106,17 @@ public class MyProcessLogger {
     }
 
     private void checkNormalTermination() {
+        boolean isNormalTermination = false; // 프로세스가 정상적으로 종료되었는지 여부
         for (String errorLog : errorLogList) { // 에러 로그 출력
+            if (errorLog.contains("Exception: ")) return;
             if (errorLog.contains("Build cancelled")) {
                 System.out.println("프로세스가 정상적으로 종료되었습니다.");
-                showResolvedCheckNotification(project); // ------------- 고쳐야함: ErrorLogStorage 존재 여부로 에러 저장했는지 안했는지 파악하기
-                errorLogList.clear();
+//                showResolvedCheckNotification(project); // ------------- 고쳐야함: ErrorLogStorage 존재 여부로 에러 저장했는지 안했는지 파악하기
+                isNormalTermination = true; // 프로세스가 정상적으로 종료되지 않았음
+                break;
             }
         }
+        if (isNormalTermination) errorLogList.clear();
     }
 
     private void showErrorNoti(Project project, ProcessEvent event) {
@@ -141,8 +159,8 @@ public class MyProcessLogger {
             public void actionPerformed(@NotNull AnActionEvent e) {
                 Notifications.Bus.notify(new Notification(
                         "MyPluginGroup",
-                        "🎉 해결 완료!",
-                        "에러가 성공적으로 해결되었어요!",
+                        "해결 완료!",
+                        "에러가 성공적으로 해결되었습니다.",
                         NotificationType.INFORMATION
                 ), project);
                 isErrorExist = false; // 에러가 해결되었음을 표시
@@ -380,7 +398,7 @@ public class MyProcessLogger {
 
                 for (VirtualFile file : files) {
                     try {
-                        if (!file.isDirectory() && file.isValid() && !file.getPath().contains("/.idea/") && !file.getPath().contains("/.gradle/")) {
+                        if (!file.isDirectory() && file.isValid() && file.getName().endsWith(".java") && !file.getPath().contains("/.idea/") && !file.getPath().contains("/.gradle/")) {
                             fileNames.add(file.getPath());
                             fileContents.add(new String(file.contentsToByteArray(), StandardCharsets.UTF_8));
                         }

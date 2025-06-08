@@ -51,6 +51,7 @@ dependencies {
 
     implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
     implementation("io.github.java-diff-utils:java-diff-utils:4.12")
+    implementation("org.json:json:20230227")
 }
 
 // Configure IntelliJ Platform Gradle Plugin - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-extension.html
