@@ -83,14 +83,11 @@ public class MyProcessLogger {
                 }
 
                 // 필요시 실시간 처리도 가능
-                System.out.print("[LOG] " + text); // 콘솔 출력
+                System.out.print("[LOG] |" + outputType + "| " + text); // 콘솔 출력
             }
 
             @Override
             public void processTerminated(ProcessEvent event) {
-                // 에러 정보, 에러 코드, 에러 해결 코드 저장 api 연결 테스트
-//                saveErrorInfo();
-
                 // 에러발생시 알림, 알림에서 저장 및 해결 또는 무시 선택 가능 / 저장 및 해결 선택 시 에러 관련 정보 저장
                 checkNormalTermination();
                 if (!errorLogList.isEmpty()) { // 에러 없이 종료시켰을 때 알람 안뜨게 해결해야됨.
@@ -100,88 +97,26 @@ public class MyProcessLogger {
                     }
                 }
                 System.out.println("-----------------isErrorExist: " + isErrorExist);
-                if (isErrorExist) { // 에러가 해결되고 종료되었을 때
+                ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
+                if (!errorLogStorage.getErrorLogs().isEmpty()) { // 에러가 해결되고 종료되었을 때 = ErrorLogStorage.xml파일이 존재
                     showResolvedCheckNotification(project);
                 }
             }
         });
     }
 
-    private void saveErrorInfo() {
-        System.out.println("*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()*()");
-        ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
-        SolvedCodeFilesStorage solvedCodeFilesStorage = SolvedCodeFilesStorage.getInstance(project);
-
-        if (errorLogStorage == null || solvedCodeFilesStorage == null) {
-            System.out.println("❗ 저장소를 가져올 수 없습니다.");
-            return;
-        }
-
-        List<ErrorLog> errorLogs = errorLogStorage.getErrorLogs();
-        List<SolvedCodeFiles> solvedFilesList = solvedCodeFilesStorage.getSolvedCodeFilesList();
-
-        System.out.println(errorLogs.get(0).commit);
-
-        for (ErrorLog errorLog : errorLogs) {
-            System.out.println("-----------------------------------------------");
-            JSONObject requestBody = new JSONObject();
-            requestBody.put("commitId", errorLog.commit);
-            requestBody.put("title", errorLog.error);
-            requestBody.put("content", errorLog.errorMessage);
-
-            // 🔧 errorCode 배열 구성
-            JSONArray errorCodeArray = new JSONArray();
-            int len = Math.min(errorLog.errorFilePathList.size(),
-                    Math.min(errorLog.errorLocationInFileList.size(), errorLog.errorFileList.size()));
-
-            IntStream.range(0, len).forEach(i -> {
-                JSONObject codeObj = new JSONObject();
-                codeObj.put("filePath", errorLog.errorFilePathList.get(i));
-                codeObj.put("errorLocation", Integer.parseInt(errorLog.errorLocationInFileList.get(i)));
-                codeObj.put("code", errorLog.errorFileList.get(i));
-                errorCodeArray.put(codeObj);
-            });
-            requestBody.put("errorCode", errorCodeArray);
-
-            // 🔧 errorSolvedCode 배열 구성
-            JSONArray solvedCodeArray = new JSONArray();
-            for (SolvedCodeFiles solved : solvedFilesList) {
-                int solvedLen = Math.min(solved.filePath.size(), solved.fileContent.size());
-                IntStream.range(0, solvedLen).forEach(i -> {
-                    JSONObject solvedObj = new JSONObject();
-                    solvedObj.put("filePath", solved.filePath.get(i));
-                    solvedObj.put("code", solved.fileContent.get(i));
-                    solvedCodeArray.put(solvedObj);
-                });
-            }
-            requestBody.put("errorSolvedCode", solvedCodeArray);
-
-            // ✅ HTTP POST 요청 전송
-            try {
-                HttpRequests.post("http://localhost:8080/errors/save/errorInfo", "application/json")
-                        .tuner(connection -> {
-                            connection.setRequestProperty("Content-Type", "application/json");
-                            connection.setRequestProperty("Authorization", "Bearer " + UserStorage.getAccessToken()); // ✅ 토큰 설정
-                        })                        .connect(request -> {
-                            request.write(requestBody.toString());
-                            String response = request.readString();
-                            System.out.println("✅ 서버 응답: " + response);
-                            return null;
-                        });
-            } catch (Exception e) {
-                System.err.println("❌ 전송 실패: " + e.getMessage());
-            }
-        }
-    }
-
     private void checkNormalTermination() {
+        boolean isNormalTermination = false; // 프로세스가 정상적으로 종료되었는지 여부
         for (String errorLog : errorLogList) { // 에러 로그 출력
+            if (errorLog.contains("Exception: ")) return;
             if (errorLog.contains("Build cancelled")) {
                 System.out.println("프로세스가 정상적으로 종료되었습니다.");
-                showResolvedCheckNotification(project); // ------------- 고쳐야함: ErrorLogStorage 존재 여부로 에러 저장했는지 안했는지 파악하기
-                errorLogList.clear();
+//                showResolvedCheckNotification(project); // ------------- 고쳐야함: ErrorLogStorage 존재 여부로 에러 저장했는지 안했는지 파악하기
+                isNormalTermination = true; // 프로세스가 정상적으로 종료되지 않았음
+                break;
             }
         }
+        if (isNormalTermination) errorLogList.clear();
     }
 
     private void showErrorNoti(Project project, ProcessEvent event) {
@@ -224,8 +159,8 @@ public class MyProcessLogger {
             public void actionPerformed(@NotNull AnActionEvent e) {
                 Notifications.Bus.notify(new Notification(
                         "MyPluginGroup",
-                        "🎉 해결 완료!",
-                        "에러가 성공적으로 해결되었어요!",
+                        "해결 완료!",
+                        "에러가 성공적으로 해결되었습니다.",
                         NotificationType.INFORMATION
                 ), project);
                 isErrorExist = false; // 에러가 해결되었음을 표시
@@ -463,7 +398,7 @@ public class MyProcessLogger {
 
                 for (VirtualFile file : files) {
                     try {
-                        if (!file.isDirectory() && file.isValid() && !file.getPath().contains("/.idea/") && !file.getPath().contains("/.gradle/")) {
+                        if (!file.isDirectory() && file.isValid() && file.getName().endsWith(".java") && !file.getPath().contains("/.idea/") && !file.getPath().contains("/.gradle/")) {
                             fileNames.add(file.getPath());
                             fileContents.add(new String(file.contentsToByteArray(), StandardCharsets.UTF_8));
                         }
