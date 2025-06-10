@@ -17,6 +17,7 @@ import com.intellij.notification.Notifications;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.fileTypes.FileTypeManager;
 import com.intellij.openapi.project.Project;
@@ -27,10 +28,8 @@ import com.intellij.psi.search.FileTypeIndex;
 import com.intellij.psi.search.FilenameIndex;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.io.HttpRequests;
-import data.AllFiles;
-import data.ErrorLog;
-import data.SolvedCodeFiles;
-import data.UserStorage;
+import data.*;
+import fetch.MySnippetRestClient;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -166,11 +165,28 @@ public class MyProcessLogger {
                 isErrorExist = false; // 에러가 해결되었음을 표시
                 // 에러 해결 코드 생성 후 파일에 저장
                 createSolvedCodeAndSaveInFile(project);
+                // 에러 코드 블럭 조회 후 파일에 저장
+                getErrorCodeBlocksAndSaveInFile(project);
                 notification.expire(); // 이전 알림 닫기
             }
         });
 
         Notifications.Bus.notify(notification, project);
+    }
+
+    private void getErrorCodeBlocksAndSaveInFile(Project project) {
+        // 코드 블럭 조회 api로 redis에 저장된 모든 코드 블럭 불러오기
+        ErrorCodeBlock errorCodeBlock = CodeBlockHttpClient.fetchAllCodeBlcok(project);
+        System.out.println("$$$$$$$$$$$$$$4" + errorCodeBlock);
+        // 에러 코드 블록 "ErrorCodeBlocks.xml" 파일에 저장
+        ErrorCodeBlockStorage errorCodeBlockStorage = ErrorCodeBlockStorage.getInstance(project);
+        errorCodeBlockStorage.addErrorCodeBlock(errorCodeBlock);
+    }
+
+    // 안전하게 인덱스 접근 (null-safe)
+    private static <T> String safeGet(List<T> list, int index) {
+        if (list == null || index >= list.size()) return "N/A";
+        return String.valueOf(list.get(index));
     }
 
     private void createSolvedCodeAndSaveInFile(Project project) {

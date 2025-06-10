@@ -3,6 +3,7 @@ package handler;
 import ErrorLog.ErrorLogStorage;
 import ErrorLog.AllFilesStorage;
 import ErrorLog.SolvedCodeFilesStorage;
+import ErrorLog.ErrorCodeBlockStorage;
 import actions.MyBookmarkStorage;
 import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
@@ -11,10 +12,7 @@ import com.google.gson.JsonObject;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vcs.checkin.CheckinHandler;
 import com.intellij.util.io.HttpRequests;
-import data.ErrorLog;
-import data.MyBookMark;
-import data.SolvedCodeFiles;
-import data.UserStorage;
+import data.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -50,6 +48,7 @@ public class MyCommitHandler extends CheckinHandler {
     private void saveErrorInfo(String commitId) {
         ErrorLogStorage errorLogStorage = ErrorLogStorage.getInstance(project);
         SolvedCodeFilesStorage solvedCodeFilesStorage = SolvedCodeFilesStorage.getInstance(project);
+        ErrorCodeBlockStorage errorCodeBlockStorage = ErrorCodeBlockStorage.getInstance(project);
 
         if (errorLogStorage == null || solvedCodeFilesStorage == null) {
             System.out.println("❗ 저장소를 가져올 수 없습니다.");
@@ -58,6 +57,7 @@ public class MyCommitHandler extends CheckinHandler {
 
         List<ErrorLog> errorLogs = errorLogStorage.getErrorLogs();
         List<SolvedCodeFiles> solvedFilesList = solvedCodeFilesStorage.getSolvedCodeFilesList();
+        List<ErrorCodeBlock> errorCodeBlockList = errorCodeBlockStorage.getErrorCodeBlockList();
 
         int listSize = Math.min(errorLogs.size(), solvedFilesList.size());
 
@@ -66,6 +66,7 @@ public class MyCommitHandler extends CheckinHandler {
         for (int i = 0; i < listSize; i++) {
             ErrorLog errorLog = errorLogs.get(i);
             SolvedCodeFiles solvedFiles = solvedFilesList.get(i);
+            ErrorCodeBlock errorCodeBlock = errorCodeBlockList.get(i);
 
             JSONObject errorItem = new JSONObject();
             errorItem.put("commitId", commitId);
@@ -86,14 +87,35 @@ public class MyCommitHandler extends CheckinHandler {
             });
             errorItem.put("errorCode", errorCodeArray);
 
-            // errorSolvedCode 구성
+            // errorSolvedCode + 연결된 errorCodeBlock
             JSONArray solvedCodeArray = new JSONArray();
             int solvedSize = Math.min(solvedFiles.filePath.size(), solvedFiles.fileContent.size());
 
             IntStream.range(0, solvedSize).forEach(j -> {
+                String currentFilePath = solvedFiles.filePath.get(j);
                 JSONObject solvedObj = new JSONObject();
-                solvedObj.put("filePath", solvedFiles.filePath.get(j));
+                solvedObj.put("filePath", currentFilePath);
                 solvedObj.put("code", solvedFiles.fileContent.get(j));
+
+                // errorCodeBlock: filePath로 매칭된 것만 추가
+                int errorCodeBlockSize = errorCodeBlock.getId().size();
+                JSONArray blockArray = new JSONArray();
+                for (int k = 0; k < errorCodeBlockSize; k++) {
+                    if (errorCodeBlock.getFilePath().get(k).equals(currentFilePath)) {
+                        JSONObject blockObj = new JSONObject();
+                        blockObj.put("id", errorCodeBlock.getId().get(k));
+                        blockObj.put("title", errorCodeBlock.getTitle().get(k));
+                        blockObj.put("filePath", errorCodeBlock.getFilePath().get(k));
+                        blockObj.put("startOffset", errorCodeBlock.getStartOffset().get(k));
+                        blockObj.put("endOffset", errorCodeBlock.getEndOffset().get(k));
+                        blockObj.put("content", errorCodeBlock.getContent().get(k));
+                        blockObj.put("code", errorCodeBlock.getCode().get(k));
+                        blockObj.put("category", errorCodeBlock.getCategory().get(k));
+                        blockObj.put("status", errorCodeBlock.getStatus().get(k));
+                        blockArray.put(blockObj);
+                    }
+                }
+                solvedObj.put("errorCodeBlock", blockArray); // 매칭된 block이 없으면 빈 배열
                 solvedCodeArray.put(solvedObj);
             });
             errorItem.put("errorSolvedCode", solvedCodeArray);
@@ -127,9 +149,11 @@ public class MyCommitHandler extends CheckinHandler {
         AllFilesStorage allFilesStorage = AllFilesStorage.getInstance(project);
         allFilesStorage.deleteAllFilesStorageFile(project);
         solvedCodeFilesStorage.deleteSolvedCodeFilesStorageFile(project);
+        errorCodeBlockStorage.deleteErrorCodeBlockStorageFile(project);
         errorLogStorage.clearAll();
         allFilesStorage.clearAll();
         solvedCodeFilesStorage.clearAll();
+        errorCodeBlockStorage.clearAll();
     }
 
     private void sendCommitEvent(String commitId) {

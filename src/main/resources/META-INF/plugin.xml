@@ -16,6 +16,7 @@
         <projectService serviceImplementation="ErrorLog.ErrorLogStorage"/>
         <projectService serviceImplementation="ErrorLog.AllFilesStorage"/>
         <projectService serviceImplementation="ErrorLog.SolvedCodeFilesStorage"/>
+        <projectService serviceImplementation="ErrorLog.ErrorCodeBlockStorage"/>
         <checkinHandlerFactory implementation="handler.MyCommitHandlerFactory"/>
         <postStartupActivity
                 implementation="ErrorLog.MyStartupActivity"></postStartupActivity>
