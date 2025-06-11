@@ -1,32 +1,36 @@
 package listener;
 
 
+import actions.MyBookmarkStorage;
+import com.intellij.icons.AllIcons;
+import com.intellij.openapi.actionSystem.AnAction;
+import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.RangeMarker;
+import com.intellij.openapi.editor.markup.*;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.editor.event.EditorFactoryEvent;
 import com.intellij.openapi.editor.event.EditorFactoryListener;
-import com.intellij.openapi.editor.markup.HighlighterLayer;
-import com.intellij.openapi.editor.markup.HighlighterTargetArea;
-import com.intellij.openapi.editor.markup.MarkupModel;
-import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorManager;
 import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.util.IconUtil;
 import com.intellij.util.messages.MessageBusConnection;
 import data.MyBookMark;
 import data.SnippetMarkerService;
 import data.UserStorage;
 import fetch.MySnippetRestClient;
+import fetch.SendSnippetDeleteService;
 import fetch.SendSnippetUpdateService;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.*;
 import java.awt.*;
 import java.util.List;
 import java.util.Map;
@@ -129,7 +133,7 @@ public final class EditorLifecycleListener implements EditorFactoryListener {
                 if (document == null) continue;
                 markerService.addMarker(sn.id, document, sn.startOffset, sn.endOffset);
                 addHighlightForRange(project, vf, document,
-                        sn.startOffset, sn.endOffset);
+                        sn.startOffset, sn.endOffset, sn.id);
             }
             System.out.println("[EditorLifecycleListener] 서버에서 스니펫 복원 완료: 총 " +
                     serverSnippets.size() + "개");
@@ -141,35 +145,98 @@ public final class EditorLifecycleListener implements EditorFactoryListener {
      * - FileEditorManager를 통해 현재 열려 있는 에디터에서만 하이라이트 가능.
      * - 파일이 열려 있지 않으면, 나중에 열릴 때 붙도록 FileEditorManagerListener 등을 추가로 등록해야 함.
      */
-    private void addHighlightForRange(@NotNull Project project,
+//    private void addHighlightForRange(@NotNull Project project,
+//                                      @NotNull VirtualFile vf,
+//                                      @NotNull Document document,
+//                                      int startOffset,
+//                                      int endOffset) {
+//        // FileEditorManager를 통해 해당 파일이 열려 있는 모든 에디터를 가져옴
+//        FileEditor[] editors = FileEditorManager.getInstance(project).getAllEditors(vf);
+//        for (FileEditor fe : editors) {
+//            // 실제 편집 가능한 에디터(Editor)를 얻으려면 다음 변환이 필요
+//            if (!(fe instanceof TextEditor textEditor)) {
+//                continue;
+//            }
+//            var editor = textEditor.getEditor();
+//            MarkupModel markupModel = editor.getMarkupModel();
+//
+//            // TextAttributesKey 또는 직접 TextAttributes 생성
+//            TextAttributes attributes = new TextAttributes();
+//            // 배경색을 조금 연한 노란색으로 설정 (필요에 따라 색상 조정)
+//            attributes.setBackgroundColor(new Color(0xE8DF7D));
+//
+//            // RangeHighlighter 타입: 영역 전체 배경 채우기 위한 LAYER
+//            int layer = HighlighterLayer.SELECTION - 1; // Selection 바로 아래 레이어
+//            markupModel.addRangeHighlighter(
+//                    startOffset,
+//                    endOffset,
+//                    layer,
+//                    attributes,
+//                    HighlighterTargetArea.EXACT_RANGE
+//            );
+//        }
+//    }
+    public static void addHighlightForRange(@NotNull Project project,
                                       @NotNull VirtualFile vf,
                                       @NotNull Document document,
                                       int startOffset,
-                                      int endOffset) {
-        // FileEditorManager를 통해 해당 파일이 열려 있는 모든 에디터를 가져옴
+                                      int endOffset,
+                                      @NotNull String snippetId) {
         FileEditor[] editors = FileEditorManager.getInstance(project).getAllEditors(vf);
         for (FileEditor fe : editors) {
-            // 실제 편집 가능한 에디터(Editor)를 얻으려면 다음 변환이 필요
             if (!(fe instanceof TextEditor textEditor)) {
                 continue;
             }
             var editor = textEditor.getEditor();
             MarkupModel markupModel = editor.getMarkupModel();
 
-            // TextAttributesKey 또는 직접 TextAttributes 생성
+            // 1) 배경색 하이라이트
             TextAttributes attributes = new TextAttributes();
-            // 배경색을 조금 연한 노란색으로 설정 (필요에 따라 색상 조정)
-            attributes.setBackgroundColor(new Color(0xE8DF7D));
-
-            // RangeHighlighter 타입: 영역 전체 배경 채우기 위한 LAYER
-            int layer = HighlighterLayer.SELECTION - 1; // Selection 바로 아래 레이어
-            markupModel.addRangeHighlighter(
+            attributes.setBackgroundColor(new Color(0xE1DB94));
+            int layer = HighlighterLayer.SELECTION - 1;
+            RangeHighlighter highlighter = markupModel.addRangeHighlighter(
                     startOffset,
                     endOffset,
                     layer,
                     attributes,
                     HighlighterTargetArea.EXACT_RANGE
             );
+
+            // 2) 닫기 아이콘(GutterIcon) 추가
+            highlighter.setGutterIconRenderer(new GutterIconRenderer() {
+                @NotNull
+                @Override
+                public Icon getIcon() {
+                    return AllIcons.Actions.DeleteTag;
+                }
+                @Override
+                public AnAction getClickAction() {
+                    return new AnAction() {
+                        @Override
+                        public void actionPerformed(@NotNull AnActionEvent e) {
+                            // 화면에서 하이라이트 즉시 제거
+                            markupModel.removeHighlighter(highlighter);
+                            // 메모리상의 RangeMarker도 제거
+                            SnippetMarkerService.getInstance(project).removeMarker(snippetId);
+
+                            // 로컬 Map에서도 제거
+                            MyBookmarkStorage storage = MyBookmarkStorage.getInstance(project);
+                            storage.removeBookmark(snippetId);
+
+                            // 서버/Redis에서 스니펫 deleted
+                            SendSnippetDeleteService.sendDeleteSnippet(project, snippetId);
+                        }
+                    };
+                }
+                @Override
+                public boolean equals(Object obj) {
+                    return obj == this;
+                }
+                @Override
+                public int hashCode() {
+                    return snippetId.hashCode();
+                }
+            });
         }
     }
 

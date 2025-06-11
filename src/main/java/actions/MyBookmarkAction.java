@@ -111,7 +111,6 @@ public class MyBookmarkAction extends AnAction {
 
                 // 4. 선택 영역(Text Selection)의 시작/끝 Offset 계산
                 Document document = editor.getDocument();
-
                 int startOffset = selectionModel.getSelectionStart();
                 int endOffset   = selectionModel.getSelectionEnd();
 //                int lineNumber  = editor.getCaretModel().getLogicalPosition().line;
@@ -212,7 +211,7 @@ public class MyBookmarkAction extends AnAction {
 
     private List<String> fetchCategoriesFromServer() {
         // 기본 카테고리 우선 제공
-        List<String> categories = new ArrayList<>(List.of("리팩토링", "버그 수정", "기능 구현"));
+        List<String> categories = new ArrayList<>();
         String token = UserStorage.getAccessToken();
         try {
             URL url = new URL("http://localhost:8080/categories");
