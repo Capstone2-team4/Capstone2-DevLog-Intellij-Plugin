@@ -18,6 +18,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import data.MyBookMark;
 import data.SnippetMarkerService;
 import data.UserStorage;
+import listener.EditorLifecycleListener;
 import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
@@ -106,40 +107,9 @@ public class SendSnippetCreateService {
 
         SnippetMarkerService markerService = SnippetMarkerService.getInstance(project);
         markerService.addMarker(sn.id, document, sn.startOffset, sn.endOffset);
-        addHighlightForRange(project, vf, document, sn.startOffset, sn.endOffset);
+        EditorLifecycleListener.addHighlightForRange(project, vf, document, sn.startOffset, sn.endOffset, sn.id);
     }
 
-    private static void addHighlightForRange(@NotNull Project project,
-                                             @NotNull VirtualFile vf,
-                                             @NotNull Document document,
-                                             int startOffset,
-                                             int endOffset) {
-        // FileEditorManager를 통해 해당 파일이 열려 있는 모든 에디터를 가져옴
-        FileEditor[] editors = FileEditorManager.getInstance(project).getAllEditors(vf);
-        for (FileEditor fe : editors) {
-            // 실제 편집 가능한 에디터(Editor)를 얻으려면 다음 변환이 필요
-            if (!(fe instanceof TextEditor textEditor)) {
-                continue;
-            }
-            var editor = textEditor.getEditor();
-            MarkupModel markupModel = editor.getMarkupModel();
-
-            // TextAttributesKey 또는 직접 TextAttributes 생성
-            TextAttributes attributes = new TextAttributes();
-            // 배경색을 조금 연한 노란색으로 설정 (필요에 따라 색상 조정)
-            attributes.setBackgroundColor(new Color(0xE2DC9F));
-
-            // RangeHighlighter 타입: 영역 전체 배경 채우기 위한 LAYER
-            int layer = HighlighterLayer.SELECTION - 1; // Selection 바로 아래 레이어
-            markupModel.addRangeHighlighter(
-                    startOffset,
-                    endOffset,
-                    layer,
-                    attributes,
-                    HighlighterTargetArea.EXACT_RANGE
-            );
-        }
-    }
 
 
 }
