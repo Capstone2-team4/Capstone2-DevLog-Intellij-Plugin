@@ -239,7 +239,7 @@ public class MyProcessLogger {
                         if (!addedLines.isEmpty()) {
 //                                System.out.println("➕ 추가된 줄 (수정본 기준):");
                             if (type == DeltaType.CHANGE) {
-                                newSolvedCode += "수정된 코드\n";
+                                newSolvedCode += "* 수정된 코드\n";
                             }
                             for (int j = 0; j < addedLines.size(); j++) {
                                 int revLineNum = revStart + 1 + j; // 1-based 보정
@@ -248,7 +248,7 @@ public class MyProcessLogger {
                                     newSolvedCode += "+ " + addedLines.get(j) + "\n";
                                 }
                                 else if (type == DeltaType.CHANGE) {
-                                    newSolvedCode += "* " + addedLines.get(j) + "\n";
+                                    newSolvedCode += "  " + addedLines.get(j) + "\n";
                                 }
                             }
                             justBeforeLineNum += addedLines.size(); // 마지막으로 수정된 줄 번호 업데이트
@@ -257,7 +257,7 @@ public class MyProcessLogger {
                         // 삭제된 줄 출력 (원본 기준 + 수정본 위치 표시)
                         if (!deletedLines.isEmpty()) {
                             if (type == DeltaType.CHANGE) {
-                                newSolvedCode += "수정전 코드\n";
+                                newSolvedCode += "* 수정전 코드\n";
                             }
 //                                System.out.println("➖ 삭제된 줄 (원본 기준):");
                             for (int j = 0; j < deletedLines.size(); j++) {

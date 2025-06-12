@@ -4,7 +4,7 @@ package listener;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.RangeMarker;
-import com.intellij.openapi.fileEditor.FileEditor;
+import com.intellij.openapi.fileEditor.*;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.editor.event.EditorFactoryEvent;
@@ -14,8 +14,6 @@ import com.intellij.openapi.editor.markup.HighlighterTargetArea;
 import com.intellij.openapi.editor.markup.MarkupModel;
 import com.intellij.openapi.editor.markup.TextAttributes;
 import com.intellij.openapi.fileEditor.FileEditor;
-import com.intellij.openapi.fileEditor.FileEditorManager;
-import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -174,6 +172,12 @@ public final class EditorLifecycleListener implements EditorFactoryListener {
     }
 
     private void onDocumentChanged(@NotNull Project project, @NotNull Document document) {
+        // 해당 Document가 .log 파일인지 확인
+        VirtualFile file = FileDocumentManager.getInstance().getFile(document);
+        if (file == null || file.getName().endsWith(".log")) {
+            return; // .log 파일이면 무시
+        }
+
         SnippetMarkerService markerService = SnippetMarkerService.getInstance(project);
         Map<String, RangeMarker> allMarkers = markerService.getAllMarkers();
 

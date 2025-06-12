@@ -4,11 +4,15 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.io.FileUtil;
+import com.intellij.openapi.vfs.VirtualFile;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import data.ErrorCodeBlock;
 import data.MyBookMark;
 import data.UserStorage;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
@@ -96,11 +100,14 @@ public class CodeBlockHttpClient {
 
                     // DTO 리스트를 순회하며 각 필드별로 리스트 채움
                     for (MyBookMark codeBlcok : codeBlockList) {
+                        // 오프셋 수정
+                        int addedStartOffset = modifyCodeBlockStartOffset(codeBlcok.filePath, codeBlcok.code);
+                        int addedEndOffset = modifyCodeBlockEndOffset(codeBlcok.filePath, codeBlcok.code);
                         idList.add(codeBlcok.id);
                         titleList.add(codeBlcok.title);
                         filePathList.add(codeBlcok.filePath);
-                        startOffsetList.add(codeBlcok.startOffset);
-                        endOffsetList.add(codeBlcok.endOffset);
+                        startOffsetList.add(codeBlcok.startOffset + addedStartOffset);
+                        endOffsetList.add(codeBlcok.endOffset + addedEndOffset);
                         contentList.add(codeBlcok.content);
                         codeList.add(codeBlcok.code);
                         categoryList.add(codeBlcok.category);
@@ -129,6 +136,58 @@ public class CodeBlockHttpClient {
             }
         } catch (Exception ex) {
             ex.printStackTrace();
+            return null;
+        }
+    }
+
+    private static int modifyCodeBlockStartOffset(String filePath, String codeBlockCode) {
+        // code string에서 startOffset(byte수)까지 '\n'개수 파악 후 개수만큼 startOffset과 endOffset에 추가하여 조정
+        int lineFeedCount = 0;
+        String code = readFileContentInPlugin(filePath);
+        String[] lines = code.split("\n");
+        String[] codeBlockCodeLines = codeBlockCode.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            lineFeedCount += 2;
+            if (lines[i].contains(codeBlockCodeLines[0])) break;
+        }
+
+        // 개수만큼 보정값을 더한 새로운 offset 반환
+        System.out.println("------StartOffset 확인 코드: " + code);
+        System.out.println("------StartOffset 더해지는 count: " + lineFeedCount);
+        return lineFeedCount;
+    }
+
+    private static int modifyCodeBlockEndOffset(String filePath, String codeBlockCode) {
+        // code string에서 startOffset(byte수)부터 endOffset(byte수)까지 '\n'개수 파악 후 개수만큼 startOffset과 endOffset에 추가하여 조정
+        int lineFeedCount = 0;
+        String code = readFileContentInPlugin(filePath);
+        String[] lines = code.split("\n");
+        String[] codeBlockCodeLines = codeBlockCode.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            lineFeedCount += 2;
+            if (lines[i].contains(codeBlockCodeLines[codeBlockCodeLines.length - 1])) break;
+        }
+        // 개수만큼 보정값을 더한 새로운 offset 반환
+        System.out.println("------EndOffset 확인 코드: " + code);
+        System.out.println("------EndOffset 더해지는 count: " + lineFeedCount);
+        return lineFeedCount;
+    }
+
+    public static String readFileContentInPlugin(String absolutePath) {
+        try {
+            // VirtualFile을 통한 접근 (IntelliJ 권장 방식)
+            VirtualFile virtualFile = VirtualFileManager.getInstance()
+                    .findFileByUrl("file://" + absolutePath);
+
+            if (virtualFile != null && virtualFile.exists()) {
+                return new String(virtualFile.contentsToByteArray());
+            }
+
+            // 또는 직접 파일 시스템 접근
+            return FileUtil.loadFile(new java.io.File(absolutePath));
+
+        } catch (IOException e) {
+            e.printStackTrace();
             return null;
         }
     }
